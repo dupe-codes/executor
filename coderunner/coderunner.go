@@ -27,8 +27,8 @@ func (cr *CodeRun) Run() (string, error) {
 		return "", err
 	}
 	tmpFile := fmt.Sprintf("%s_run.%s", cr.Name, ext)
-  dumpCodeContents(tmpFile, cr.Code)
-  defer cleanTmpFiles(tmpFile)
+	dumpCodeContents(tmpFile, cr.Code)
+	defer cleanTmpFiles(tmpFile)
 
 	// Actually might not make much sense to run this as a goroutine
 	// FIXME: Review this later
@@ -63,7 +63,7 @@ func (cr *CodeRun) Run() (string, error) {
 
 func cleanTmpFiles(tmpFile string) {
 	// Finally, clean up generated tmp files
-  err := os.Remove(tmpFile)
+	err := os.Remove(tmpFile)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "An error occurred removing the temp code file")
 	}
