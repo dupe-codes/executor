@@ -21,23 +21,14 @@ type RunResult struct {
 
 // Runs the desired code run, returning an error if one
 // is encountered during code execution
-func (cr *CodeRun) Run() error {
+func (cr *CodeRun) Run() (string, error) {
 	ext, err := getExtension(cr.Language)
 	if err != nil {
-		return err
+		return "", err
 	}
 	tmpFile := fmt.Sprintf("%s_run.%s", cr.Name, ext)
-
-	// Dump code contents into tmp file for running
-	file, err := os.Create(tmpFile)
-	if err != nil {
-		return errors.New("Encountered an error writing tmp code file")
-	}
-	defer file.Close()
-
-	writer := bufio.NewWriter(file)
-	writer.WriteString(cr.Code)
-	writer.Flush()
+  dumpCodeContents(tmpFile, cr.Code)
+  defer cleanTmpFiles(tmpFile)
 
 	// Actually might not make much sense to run this as a goroutine
 	// FIXME: Review this later
@@ -64,10 +55,18 @@ func (cr *CodeRun) Run() error {
 
 	result := <-resultChan
 	if result.Error != nil {
-		return result.Error
+		return "", result.Error
 	}
-	fmt.Fprintln(os.Stdout, "The command resulted in the following output:\n", result.Output)
-	return nil
+
+	return result.Output, nil
+}
+
+func cleanTmpFiles(tmpFile string) {
+	// Finally, clean up generated tmp files
+  err := os.Remove(tmpFile)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "An error occurred removing the temp code file")
+	}
 }
 
 // Returns the appropriate extension type for the given
@@ -78,4 +77,19 @@ func getExtension(lang string) (string, error) {
 		return "py", nil
 	}
 	return "", errors.New("No matching extension for given language found")
+}
+
+// Dump code contents into tmp file for running
+func dumpCodeContents(tmpFile string, code string) error {
+	file, err := os.Create(tmpFile)
+	if err != nil {
+		return errors.New("Encountered an error writing tmp code file")
+	}
+	defer file.Close()
+
+	writer := bufio.NewWriter(file)
+	writer.WriteString(code)
+	writer.Flush()
+
+	return nil
 }
