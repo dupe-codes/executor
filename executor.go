@@ -12,7 +12,7 @@ func main() {
 	router := mux.NewRouter()
 	router.Handle("/", http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		fmt.Fprintf(rw, "hello!")
-  }))
+	}))
 
 	http.Handle("/", router)
 	fmt.Println("Listening on port 8080")

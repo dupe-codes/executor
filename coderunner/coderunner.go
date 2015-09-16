@@ -5,12 +5,18 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 )
 
 type CodeRun struct {
 	Name     string `bson:"name" json:"name"`
 	Code     string `bson:"code" json:"code"`
 	Language string `bson:"language" json:"language"`
+}
+
+type RunResult struct {
+	Output string `bson:"output" json:"output"`
+	Error  error  `bson:"error" json "error"`
 }
 
 // Runs the desired code run, returning an error if one
@@ -33,6 +39,34 @@ func (cr *CodeRun) Run() error {
 	writer.WriteString(cr.Code)
 	writer.Flush()
 
+	// Actually might not make much sense to run this as a goroutine
+	// FIXME: Review this later
+	resultChan := make(chan *RunResult)
+	go func(lang string, codeFile string, resultChan chan *RunResult) {
+		var cmd string
+		var args []string
+		switch lang {
+		case "python":
+			cmd = "python"
+			args = []string{codeFile}
+		}
+
+		output, err := exec.Command(cmd, args...).Output()
+		if err != nil {
+			result := &RunResult{"", err}
+			resultChan <- result
+			return
+		}
+
+		result := &RunResult{string(output), nil}
+		resultChan <- result
+	}(cr.Language, tmpFile, resultChan)
+
+	result := <-resultChan
+	if result.Error != nil {
+		return result.Error
+	}
+	fmt.Fprintln(os.Stdout, "The command resulted in the following output:\n", result.Output)
 	return nil
 }
 
